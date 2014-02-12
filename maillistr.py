@@ -9,15 +9,15 @@ import json
 import dateutil.parser
 
 
-import gevent
-from gevent import monkey; monkey.patch_all()
-
-
 app = Flask(__name__)
 app.config.from_pyfile('settings.py')
-
 db = SQLAlchemy(app)
 manager = Manager(app)
+
+
+if app.config['USE_GEVENT']:
+    import gevent
+    from gevent import monkey; monkey.patch_all()
 
 
 # ---------------------------------------------------------------
@@ -218,7 +218,10 @@ def add_entry(elist):
     db.session.commit()
 
     if app.config['MAILCHIMP'] and elist.mailchimp_list_id is not None:
-        gevent.spawn(add_to_mailchimp_list, elist.mailchimp_list_id, form.email.data)
+        if app.config['USE_GEVENT']:
+            gevent.spawn(add_to_mailchimp_list, elist.mailchimp_list_id, form.email.data)
+        else:
+            add_to_mailchimp_list(elist.mailchimp_list_id, form.email.data)
 
     return format_resp(success=True, already_added=False)
 

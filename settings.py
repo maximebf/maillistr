@@ -1,3 +1,4 @@
 SQLALCHEMY_DATABASE_URI = 'sqlite:///maillistr.db'
+USE_GEVENT = False
 MAILCHIMP = False
 MAILCHIMP_APIKEY = ''

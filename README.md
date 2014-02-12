@@ -13,9 +13,16 @@ Saves entries in a database and can add them to a Mailchimp list
 
 Available on port 5000
 
-## Mailchimp support
+## Configuration
+
+### Mailchimp support
 
 Set `MAILCHIMP = True` in settings.py and set your api key.
+
+### Using Gevent to call Mailchimp API
+
+Install gevent using `pip install gevent`.  
+Set `USE_GEVENT = True` in settings.py.
 
 ## Usage
 
