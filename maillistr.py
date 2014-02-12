@@ -8,6 +8,10 @@ from functools import wraps
 from flask_script import Manager, Server
 
 
+import gevent
+from gevent import monkey; monkey.patch_all()
+
+
 app = Flask(__name__)
 app.config.from_pyfile('settings.py')
 
@@ -41,13 +45,11 @@ class EmailListEntry(db.Model):
     email = db.Column(db.String)
     ip = db.Column(db.String)
     added_at = db.Column(db.DateTime, default=func.now())
-    added_to_mailchimp = db.Column(db.Boolean, default=False)
 
     def to_dict(self):
         return {"email": self.email,
                 "ip": self.ip,
-                "added_at": self.added_at.isoformat(),
-                "added_to_mailchimp": self.added_to_mailchimp}
+                "added_at": self.added_at.isoformat()}
 
 
 # ---------------------------------------------------------------
@@ -72,13 +74,13 @@ if app.config['MAILCHIMP']:
 
 def add_to_mailchimp_list(list_id, email):
     try:
+        app.logger.debug('Adding %s to mailchimp list %s' % (email, list_id))
         mailchimp_api.lists.subscribe(list_id, {'email': email},
             double_optin=False, update_existing=True, send_welcome=False)
-        return True
+        app.logger.debug('Added %s to mailchimp list %s' % (email, list_id))
     except Exception as e:
-        app.logger.error("Failed adding '%s' to mailchimp list" % email)
+        app.logger.error("Failed adding %s to mailchimp list %s" % (email, list_id))
         app.logger.error(e)
-        return False
 
 
 # ---------------------------------------------------------------
@@ -199,15 +201,18 @@ def add_entry(elist):
     if not form.validate_on_submit():
         return jsonify(success=False, error=", ".join(form.email.errors))
 
+    if elist.entries.filter_by(email=form.email.data).count() > 0:
+        return jsonify(success=True, already_added=True)
+
     entry = EmailListEntry(email=form.email.data, ip=request.remote_addr)
     elist.entries.append(entry)
-
-    if app.config['MAILCHIMP'] and elist.mailchimp_list_id is not None:
-        entry.added_to_mailchimp = add_to_mailchimp_list(elist.mailchimp_list_id, form.email.data)
-
     db.session.add(entry)
     db.session.commit()
-    return jsonify(success=True)
+
+    if app.config['MAILCHIMP'] and elist.mailchimp_list_id is not None:
+        gevent.spawn(add_to_mailchimp_list, elist.mailchimp_list_id, form.email.data)
+
+    return jsonify(success=True, already_added=False)
 
 @app.route('/<slug>/entries', methods=['GET'])
 @require_auth

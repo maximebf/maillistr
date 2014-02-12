@@ -112,8 +112,7 @@ Response;
             {
                 "email": "example@example.com",
                 "ip": "127.0.0.1",
-                "added_at": "ISO 8601 date",
-                "added_to_mailchimp": true
+                "added_at": "ISO 8601 date"
             }
         ]
     }
