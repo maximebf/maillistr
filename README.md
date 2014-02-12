@@ -13,6 +13,10 @@ Saves entries in a database and can add them to a Mailchimp list
 
 Available on port 5000
 
+## Mailchimp support
+
+Set `MAILCHIMP = True` in settings.py and set your api key.
+
 ## Usage
 
 ### Authentification
@@ -22,6 +26,11 @@ Use the generated api key as the HTTP username
     curl http://APIKEY:@example.com/
 
 All request needs authentification unless specified
+
+### Responses
+
+Responses use JSON. The key "success" will always be present with a boolean value.
+In case success is false, an "error" key will contain a string with the error message.
 
 ### List lists
 
@@ -78,6 +87,8 @@ Response:
     }
 
 ### Add entry
+
+Does NOT require authentification
 
 Request:
 

@@ -1,9 +1,7 @@
 from flask import Flask, request, jsonify, abort
 from flask.ext.sqlalchemy import SQLAlchemy
 from flask_wtf import Form
-from wtforms import StringField
-from wtforms.fields.html5 import EmailField
-from wtforms.validators import Required
+from wtforms import StringField, validators
 from sqlalchemy import func
 from sqlalchemy.orm import backref
 from functools import wraps
@@ -58,7 +56,7 @@ class EmailListEntry(db.Model):
 
 
 class EmailForm(Form):
-    email = EmailField("Email", validators=[Required()])
+    email = StringField("Email", validators=[validators.DataRequired(), validators.Email()])
 
 
 # ---------------------------------------------------------------
@@ -197,14 +195,14 @@ def delete_list(elist):
 @app.route('/<slug>/entries', methods=['POST'])
 @require_list
 def add_entry(elist):
-    form = EmailForm()
+    form = EmailForm(csrf_enabled=False)
     if not form.validate_on_submit():
-        return jsonify(success=False, errors=form.errors)
+        return jsonify(success=False, error=", ".join(form.email.errors))
 
     entry = EmailListEntry(email=form.email.data, ip=request.remote_addr)
     elist.entries.append(entry)
 
-    if app.config['MAILCHIMP']:
+    if app.config['MAILCHIMP'] and elist.mailchimp_list_id is not None:
         entry.added_to_mailchimp = add_to_mailchimp_list(elist.mailchimp_list_id, form.email.data)
 
     db.session.add(entry)
