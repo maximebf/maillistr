@@ -4,3 +4,4 @@ flask-script
 wtforms
 mailchimp
 gevent
+python-dateutil

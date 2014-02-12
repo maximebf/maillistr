@@ -6,6 +6,7 @@ from sqlalchemy.orm import backref
 from functools import wraps
 from flask_script import Manager, Server
 import json
+import dateutil.parser
 
 
 import gevent
@@ -222,20 +223,29 @@ def add_entry(elist):
     return format_resp(success=True, already_added=False)
 
 
-@app.route('/<slug>/entries', methods=['GET'])
+@app.route('/<slug>/entries')
+@app.route('/<slug>/entries.csv')
 @require_auth
 @require_list
 def list_entries(elist):
-    entries = [e.to_dict() for e in elist.entries]
-    return jsonify(success=True, nb_entries=len(entries), entries=entries)
+    q = elist.entries.order_by(EmailListEntry.added_at)
 
+    if 'since' in request.args:
+        since = dateutil.parser.parse(request.args['since'])
+        q = q.filter(EmailListEntry.added_at >= since)
 
-@app.route('/<slug>/entries.csv', methods=['GET'])
-@require_auth
-@require_list
-def list_entries_csv(elist):
-    entries = [e.email for e in elist.entries]
-    return "\n".join(entries)
+    if 'limit' in request.args:
+        q = q.limit(int(request.args['limit']))
+
+    if 'offset' in request.args:
+        q = q.offset(int(request.args['offset']))
+
+    if request.url_rule.rule == '/<slug>/entries.csv':
+        return "\n".join([e.email for e in q.all()])
+
+    entries = [e.to_dict() for e in q.all()]
+    nb_total = elist.entries.count()
+    return jsonify(success=True, nb_entries=len(entries), nb_total=nb_total, entries=entries)
 
 
 # ---------------------------------------------------------------

@@ -117,10 +117,18 @@ Request:
 
     GET /<list_slug>/entries
 
+Optional parameters:
+
+ - `since`: a datetime string (many format supported)
+ - `limit`: integer
+ - `offset`: integer
+
 Response;
 
     {
         "success": true,
+        "nb_entries": 1,
+        "nb_total": 1,
         "entries": [
             {
                 "email": "example@example.com",
@@ -135,3 +143,5 @@ Response;
 Request:
 
     GET /<list_slug>/entries.csv
+
+Same parameters as list entries
