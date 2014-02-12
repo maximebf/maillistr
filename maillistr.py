@@ -1,11 +1,11 @@
 from flask import Flask, request, jsonify, abort
 from flask.ext.sqlalchemy import SQLAlchemy
-from flask_wtf import Form
-from wtforms import StringField, validators
+from wtforms import Form, StringField, validators
 from sqlalchemy import func
 from sqlalchemy.orm import backref
 from functools import wraps
 from flask_script import Manager, Server
+import json
 
 
 import gevent
@@ -195,14 +195,21 @@ def delete_list(elist):
 
 
 @app.route('/<slug>/entries', methods=['POST'])
+@app.route('/<slug>/entries/jsonp')
 @require_list
 def add_entry(elist):
-    form = EmailForm(csrf_enabled=False)
-    if not form.validate_on_submit():
-        return jsonify(success=False, error=", ".join(form.email.errors))
+    form = EmailForm(request.values)
+
+    def format_resp(**kwargs):
+        if request.url_rule.rule == '/<slug>/entries/jsonp':
+            return "%s(%s);" % (request.args['callback'], json.dumps(kwargs))
+        return jsonify(**kwargs)
+
+    if not form.validate():
+        return format_resp(success=False, error=", ".join(form.email.errors))
 
     if elist.entries.filter_by(email=form.email.data).count() > 0:
-        return jsonify(success=True, already_added=True)
+        return format_resp(success=True, already_added=True)
 
     entry = EmailListEntry(email=form.email.data, ip=request.remote_addr)
     elist.entries.append(entry)
@@ -212,7 +219,8 @@ def add_entry(elist):
     if app.config['MAILCHIMP'] and elist.mailchimp_list_id is not None:
         gevent.spawn(add_to_mailchimp_list, elist.mailchimp_list_id, form.email.data)
 
-    return jsonify(success=True, already_added=False)
+    return format_resp(success=True, already_added=False)
+
 
 @app.route('/<slug>/entries', methods=['GET'])
 @require_auth

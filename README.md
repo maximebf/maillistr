@@ -98,6 +98,19 @@ Parameters:
 
  - `email`
 
+### Add entry using JSONp
+
+Does NOT require authentification
+
+Request:
+
+    GET /<list_slug>/entries/jsonp
+
+Parameters:
+
+ - `email`
+ - `callback`
+
 ### List entries
 
 Request:
